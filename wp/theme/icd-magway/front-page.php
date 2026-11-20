@@ -25,18 +25,46 @@
   <section class="prow">
     <header class="sec-head"><h2 class="sec-head__h"><a href="<?= esc_url(get_permalink(wc_get_page_id('shop'))) ?>">Danh mục sản phẩm</a></h2></header>
     <div class="catnum">
-      <?php foreach (cbv_product_cats() as $t) {
-          if ($t->parent || $t->slug === 'uncategorized') continue;
+      <?php
+      $tile_img = [
+          'xe-cho-rac-chay-dien' => 'tile-xe-cho-rac.jpg',
+          'xe-quet-bui-nha-xuong' => 'tile-quet-bui-nx.jpg',
+          'xe-day-hang-chay-bang-dien' => 'tile-xe-day-hang.jpg',
+          'xe-dien-cho-hang-trong-nha-may' => 'tile-cho-hang-nha-may.jpg',
+          'xe-dien-4-banh-cho-khach' => 'tile-xe-du-lich.jpg',
+      ];
+      $img = function ($t, $file = '') use ($tile_img) {
+          $f = $file ?: ($tile_img[$t->slug] ?? '');
+          if ($f) return '<img src="' . esc_url(home_url('/uploads/images/' . $f)) . '" alt="' . esc_attr($t->name) . '" loading="lazy">';
           $p = get_posts(['post_type' => 'product', 'numberposts' => 1, 'meta_key' => '_thumbnail_id', 'tax_query' => [['taxonomy' => 'product_cat', 'terms' => $t->term_id]], 'orderby' => 'menu_order', 'order' => 'ASC']);
-          echo '<a href="' . esc_url(get_term_link($t)) . '">' . ($p ? get_the_post_thumbnail($p[0], 'cbv-card', ['loading' => 'lazy', 'alt' => esc_attr($t->name)]) : '<span class="noimg">Ảnh đang cập nhật</span>') . '<span class="catnum__t"><span>' . esc_html($t->name) . '<small>' . (int) $t->count . ' sản phẩm</small></span></span></a>';
-      } ?>
+          return $p ? get_the_post_thumbnail($p[0], 'cbv-card', ['loading' => 'lazy', 'alt' => esc_attr($t->name)]) : '<span class="noimg">Ảnh đang cập nhật</span>';
+      };
+      $tile = function ($t, $name, $count, $file = '', $link = '') use ($img) {
+          echo '<a href="' . esc_url($link ?: get_term_link($t)) . '">' . $img($t, $file) . '<span class="catnum__t"><span>' . esc_html($name) . '<small>' . (int) $count . ' sản phẩm</small></span></span></a>';
+      };
+      foreach (cbv_product_cats() as $t) {
+          if ($t->parent || $t->slug === 'uncategorized') continue;
+          if ($t->slug === 'may-ve-sinh-lam-sach-cong-nghiep') {
+              $kids = get_terms(['taxonomy' => 'product_cat', 'child_of' => $t->term_id, 'hide_empty' => false]);
+              $find = function ($kw) use ($kids, $t) { foreach ($kids as $k) { if (mb_stripos($k->name, $kw) !== false) return $k; } return $t; };
+              $k1 = $find('đẩy tay'); $k2 = $find('ngồi lái');
+              $tile($k1, 'Máy chà sàn liên hợp đẩy tay', $k1->count ?: $t->count, 'tile-cha-san-day-tay.jpg', get_term_link($k1));
+              $tile($k2, 'Máy chà sàn ngồi lái', $k2->count ?: $t->count, 'tile-cha-san-ngoi-lai.jpg', get_term_link($k2));
+              continue;
+          }
+          $tile($t, $t->name, $t->count);
+      }
+      ?>
     </div>
   </section>
 
-  <?php foreach (cbv_lines('home_rows') as $row):
+  <?php $shown_ids = []; $shown_titles = [];
+  foreach (cbv_lines('home_rows') as $row):
       $t = get_term_by('slug', $row[0], 'product_cat'); if (!$t) continue;
-      $q = new WP_Query(['post_type' => 'product', 'posts_per_page' => (int) ($row[1] ?? 8) ?: 8, 'no_found_rows' => true, 'orderby' => 'menu_order', 'order' => 'ASC',
-          'tax_query' => [['taxonomy' => 'product_cat', 'terms' => $t->term_id]]]);
+      $want = (int) ($row[1] ?? 8) ?: 8;
+      // lấy dư rồi loại sản phẩm đã hiện ở hàng trên hoặc trùng tên, để trang chủ không lặp sản phẩm
+      $q = new WP_Query(['post_type' => 'product', 'posts_per_page' => $want + 12, 'no_found_rows' => true, 'orderby' => 'date', 'order' => 'DESC',
+          'post__not_in' => $shown_ids, 'tax_query' => [['taxonomy' => 'product_cat', 'terms' => $t->term_id]]]);
       if (!$q->have_posts()) continue; ?>
   <section class="prow">
     <header class="sec-head">
@@ -44,7 +72,14 @@
       <a class="sec-head__more" href="<?= esc_url(get_term_link($t)) ?>">Xem tất cả <?= (int) $t->count ?> mẫu</a>
     </header>
     <div class="grid grid--4">
-      <?php while ($q->have_posts()) { $q->the_post(); get_template_part('template-parts/card-product'); } wp_reset_postdata(); ?>
+      <?php $n = 0;
+      while ($q->have_posts()) { $q->the_post();
+          $tk = mb_strtolower(trim(wp_strip_all_tags(get_the_title())));
+          if (in_array($tk, $shown_titles, true)) continue;
+          if ($n >= $want) break;
+          $shown_ids[] = get_the_ID(); $shown_titles[] = $tk; $n++;
+          get_template_part('template-parts/card-product');
+      } wp_reset_postdata(); ?>
     </div>
   </section>
   <?php endforeach; ?>

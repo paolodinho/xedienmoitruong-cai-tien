@@ -39,6 +39,14 @@
   // Ảnh sản phẩm: bấm ảnh nhỏ đổi ảnh lớn
   d.querySelectorAll('[data-gallery]').forEach(function (g) {
     var main = g.querySelector('[data-main]');
+    // Ảnh lỗi (404, mất mạng): bỏ ảnh nhỏ lỗi, ảnh lớn lỗi thì quay về ảnh đầu, không để lộ chữ alt
+    g.querySelectorAll('.prd__thumbs button img').forEach(function (im) {
+      im.addEventListener('error', function () { var b = im.closest('button'); if (b) b.remove(); });
+    });
+    if (main) main.addEventListener('error', function () {
+      var ok = g.querySelector('.prd__thumbs button img'), b = ok && ok.closest('button');
+      if (b && b.dataset.src && main.src !== b.dataset.src) { main.removeAttribute('srcset'); main.src = b.dataset.src; }
+    });
     g.querySelectorAll('.prd__thumbs button').forEach(function (btn) {
       btn.addEventListener('click', function () {
         if (!main) return;
