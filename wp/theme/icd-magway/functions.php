@@ -1,10 +1,12 @@
 <?php
 if (!defined('ABSPATH')) exit;
-define('CBV_VER', '1.1.4');
+define('CBV_VER', '1.2.1');
 require __DIR__ . '/inc/options.php';
 require __DIR__ . '/inc/admin-branding.php';
 require __DIR__ . '/inc/group-banner.php';
 require __DIR__ . '/inc/site.php';
+require __DIR__ . '/inc/seo.php';
+require __DIR__ . '/inc/perf.php';
 
 add_action('after_setup_theme', function () {
     add_theme_support('title-tag');
@@ -23,7 +25,6 @@ add_action('wp_enqueue_scripts', function () {
     wp_enqueue_script('cbv-main', $u . '/assets/js/main.js', [], CBV_VER, ['in_footer' => true, 'strategy' => 'defer']);
     wp_dequeue_style('wp-block-library'); wp_dequeue_style('wc-blocks-style'); wp_dequeue_style('global-styles'); wp_dequeue_style('classic-theme-styles');
 }, 20);
-add_action('wp_head', function () { echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' . "\n"; }, 1);
 remove_action('wp_head', 'print_emoji_detection_script', 7);
 remove_action('wp_print_styles', 'print_emoji_styles');
 add_filter('woocommerce_enqueue_styles', '__return_empty_array');
